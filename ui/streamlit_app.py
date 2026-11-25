@@ -133,11 +133,14 @@ elif page == "Finance":
                 e = guarded(care.record_transaction, int(rid) or None, kind, cat, desc, amt, when,
                             online=not offline)
                 if e:
-                    st.success(f"{e['status']} · receipt {e['receipt_no']}" +
-                               (f" · +{e['points']} points" if e["points"] else ""))
-                    txt = care.receipt_text(e)
-                    st.code(txt)
-                    st.download_button("Download receipt", txt, file_name=f"{e['receipt_no']}.txt")
+                    st.session_state["last_tx"] = e          # shown below: buttons other than submit can't live in a form
+        e = st.session_state.get("last_tx")
+        if e:
+            st.success(f"{e['status']} · receipt {e['receipt_no']}" +
+                       (f" · +{e['points']} points" if e["points"] else ""))
+            txt = care.receipt_text(e)
+            st.code(txt)
+            st.download_button("Download receipt", txt, file_name=f"{e['receipt_no']}.txt", key="dl_new")
     with t2:
         c1, c2, c3 = st.columns(3)
         rid = c1.number_input("Resident id (0 = all)", 0, 10**6, 0, key="st_id")
