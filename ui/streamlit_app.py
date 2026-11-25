@@ -125,7 +125,7 @@ elif page == "Finance":
             c1, c2, c3 = st.columns(3)
             kind = c1.selectbox("Type", ["INCOME", "EXPENSE"])
             rid = c2.number_input("Resident id (0 = centre-wide)", 0, 10**6, 0)
-            amt = c3.number_input(f"Amount ({cur})", 0.0, 10**7, 0.0, step=10.0)
+            amt = c3.number_input(f"Amount ({cur})", 0.0, 10_000_000.0, 0.0, step=10.0)
             cat = c1.selectbox("Category", cats["INCOME"] + cats["EXPENSE"])
             desc = c2.text_input("Description")
             when = when_input("Transaction", "tx")
