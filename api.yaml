@@ -1,0 +1,29 @@
+# REST API for other organisations. Reuses the eldercare-secret from eldercare.yaml (add PLATFORM_ADMIN_TOKEN to it).
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: eldercare-api}
+spec:
+  replicas: 2
+  selector: {matchLabels: {app: eldercare-api}}
+  template:
+    metadata: {labels: {app: eldercare-api}}
+    spec:
+      containers:
+        - name: api
+          image: YOUR_REGISTRY/eldercare:latest
+          command: ["uvicorn", "app.api.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers"]
+          ports: [{containerPort: 8000}]
+          envFrom: [{secretRef: {name: eldercare-secret}}]
+          env: [{name: DB_POOL_MAX, value: "8"}]
+          resources:
+            requests: {cpu: 250m, memory: 256Mi}
+            limits: {cpu: "1", memory: 768Mi}
+          readinessProbe: {httpGet: {path: /healthz, port: 8000}, initialDelaySeconds: 5}
+          livenessProbe: {httpGet: {path: /healthz, port: 8000}, initialDelaySeconds: 15}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: eldercare-api}
+spec:
+  selector: {app: eldercare-api}
+  ports: [{port: 80, targetPort: 8000}]
