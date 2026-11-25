@@ -1,0 +1,25 @@
+# Elder Care Centre on Fedora. Build:  docker build -f Dockerfile.fedora -t eldercare:fedora .
+ARG FEDORA_VERSION=latest
+FROM fedora:${FEDORA_VERSION}
+
+# Pinned requirements (numpy 2.0.2, pandas 2.2.3) ship wheels for Python 3.11/3.12, not for the newest
+# Fedora default, so install an explicit interpreter instead of relying on `python3`.
+ARG PYTHON_VERSION=3.11
+ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 PATH=/opt/venv/bin:$PATH
+
+RUN dnf install -y --setopt=install_weak_deps=False python${PYTHON_VERSION} \
+    && dnf clean all && rm -rf /var/cache/dnf \
+    && python${PYTHON_VERSION} -m venv /opt/venv
+
+WORKDIR /srv
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY app app
+COPY ui ui
+# Fail the build (not the deploy) if the repo is missing files.
+RUN test -f ui/streamlit_app.py && test -f app/api/main.py
+RUN useradd -m care && chown -R care /srv
+USER care
+EXPOSE 8501 8000
+# Default process = Streamlit UI; the API container overrides this command (see scripts/run-fedora.sh).
+CMD ["sh","-c","streamlit run ui/streamlit_app.py --server.port=${PORT:-8501} --server.address=0.0.0.0 --server.headless=true --server.maxUploadSize=200 --server.enableXsrfProtection=true"]

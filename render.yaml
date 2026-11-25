@@ -1,0 +1,39 @@
+# Render Blueprint: New > Blueprint > connect repo. Both services build the same Dockerfile.
+services:
+  - type: web                      # Staff UI
+    name: eldercare-app
+    runtime: docker
+    plan: standard
+    numInstances: 2
+    healthCheckPath: /_stcore/health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase: {name: eldercare-db, property: connectionString}
+      - key: REDIS_URL
+        fromService: {type: keyvalue, name: eldercare-redis, property: connectionString}
+      - key: DB_POOL_MAX
+        value: "10"
+  - type: web                      # Public REST API for other organisations
+    name: eldercare-api
+    runtime: docker
+    plan: standard
+    numInstances: 2
+    healthCheckPath: /healthz
+    dockerCommand: sh -c "uvicorn app.api.main:app --host 0.0.0.0 --port $PORT --workers 2 --proxy-headers --forwarded-allow-ips='*'"
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase: {name: eldercare-db, property: connectionString}
+      - key: REDIS_URL
+        fromService: {type: keyvalue, name: eldercare-redis, property: connectionString}
+      - key: DB_POOL_MAX
+        value: "8"
+      - key: PLATFORM_ADMIN_TOKEN
+        generateValue: true        # read it in the Render dashboard; it is the admin API bearer token
+  - type: keyvalue
+    name: eldercare-redis
+    plan: starter
+    ipAllowList: []
+    maxmemoryPolicy: allkeys-lru
+databases:
+  - name: eldercare-db
+    plan: basic-1gb

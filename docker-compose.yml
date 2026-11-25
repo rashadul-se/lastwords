@@ -1,0 +1,23 @@
+services:
+  app:
+    build: .
+    ports: ["8501:8501"]
+    environment: &env
+      DATABASE_URL: postgresql://care:care@db:5432/care
+      REDIS_URL: redis://cache:6379/0
+    depends_on: [db, cache]
+  api:
+    build: .
+    command: ["uvicorn", "app.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    ports: ["8000:8000"]
+    environment:
+      <<: *env
+      PLATFORM_ADMIN_TOKEN: change-me-locally
+    depends_on: [db, cache]
+  db:
+    image: postgres:16-alpine
+    environment: {POSTGRES_USER: care, POSTGRES_PASSWORD: care, POSTGRES_DB: care}
+    volumes: [pgdata:/var/lib/postgresql/data]
+  cache:
+    image: redis:7-alpine
+volumes: {pgdata: {}}
